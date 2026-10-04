@@ -5,7 +5,15 @@ const SOURCE = {
   raw: "https://gitlab.com/pathfinder-fr/foundryvtt-pathfinder2-fr/-/raw/master"
 };
 
-const state = { root: [], currentPath: "", currentItems: [], cache: new Map() };
+const CATEGORIES = [
+  ["ancestries", "Ascendances"], ["heritages", "Héritages"], ["backgrounds", "Historiques"],
+  ["classes", "Classes"], ["class-features", "Capacités de classe"], ["feats", "Dons"],
+  ["spells", "Sorts"], ["equipment", "Équipement"], ["deities", "Divinités"],
+  ["actions", "Actions"], ["conditions", "États"], ["pathfinder-bestiary", "Bestiaire"],
+  ["pathfinder-bestiary-2", "Bestiaire 2"], ["pathfinder-bestiary-3", "Bestiaire 3"],
+  ["pathfinder-monster-core", "Monstres de base"], ["hazards", "Dangers"], ["vehicles", "Véhicules"]
+].map(([path, label]) => ({ path: "data/" + path, label }));
+const state = { root: [], currentPath: "", currentItems: [], cache: new Map(), page: 1, hasMore: false };
 const $ = selector => document.querySelector(selector);
 const escapeHtml = value => String(value || "").replace(/[&<>"']/g, char => ({
   "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
@@ -67,21 +75,14 @@ async function gitlabJson(path, params = {}) {
   }
 }
 
-async function listTree(path = "") {
-  const key = "tree:" + path;
+async function listTree(path = "", page = 1) {
+  const key = "tree:" + path + ":" + page;
   if (state.cache.has(key)) return state.cache.get(key);
-  const items = [];
-  let page = 1;
-  while (true) {
-    const batch = await gitlabJson("projects/" + SOURCE.project + "/repository/tree", {
-      ref: SOURCE.ref, path, per_page: 100, page
-    });
-    items.push(...batch);
-    if (batch.length < 100 || page >= 20) break;
-    page += 1;
-  }
-  state.cache.set(key, items);
-  return items;
+  const batch = await gitlabJson("projects/" + SOURCE.project + "/repository/tree", {
+    ref: SOURCE.ref, path, per_page: 100, page
+  });
+  state.cache.set(key, batch);
+  return batch;
 }
 
 function displayName(item) {
@@ -93,10 +94,9 @@ function displayName(item) {
 }
 
 function renderCategories() {
-  const dirs = state.root.filter(item => item.type === "tree");
-  categories.innerHTML = dirs.map(dir =>
+  categories.innerHTML = CATEGORIES.map(dir =>
     '<button class="category-button" type="button" data-path="' + escapeHtml(dir.path) + '">' +
-    escapeHtml(displayName(dir)) + '</button>'
+    escapeHtml(dir.label) + '</button>'
   ).join("");
   categories.querySelectorAll("[data-path]").forEach(button => {
     button.addEventListener("click", () => openDirectory(button.dataset.path));
@@ -140,8 +140,10 @@ async function openDirectory(path) {
     escapeHtml(path || "la source") + '</strong>.</p></div>';
   renderBreadcrumbs(path);
   try {
-    const items = await listTree(path);
+    const items = await listTree(path, 1);
     state.currentPath = path;
+    state.page = 1;
+    state.hasMore = items.length === 100;
     renderItems(items);
     document.querySelectorAll(".category-button").forEach(button =>
       button.classList.toggle("active", button.dataset.path === path)
@@ -149,6 +151,33 @@ async function openDirectory(path) {
   } catch (error) {
     showError(error);
   }
+}
+
+function renderLoadMore() {
+  document.querySelector("#load-more")?.remove();
+  if (!state.hasMore) return;
+  const button = document.createElement("button");
+  button.id = "load-more";
+  button.className = "load-more";
+  button.type = "button";
+  button.textContent = "Charger les 100 entrées suivantes";
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    button.textContent = "Chargement…";
+    try {
+      const next = await listTree(state.currentPath, state.page + 1);
+      state.page += 1;
+      state.hasMore = next.length === 100;
+      state.currentItems = state.currentItems.concat(next);
+      renderItems(state.currentItems);
+      renderLoadMore();
+    } catch (error) {
+      button.disabled = false;
+      button.textContent = "Réessayer";
+      showError(error);
+    }
+  });
+  content.appendChild(button);
 }
 
 function parseEntry(raw) {
@@ -232,22 +261,12 @@ async function searchSource(query) {
 searchInput?.addEventListener("input", () => searchSource(searchInput.value));
 
 async function init() {
-  try {
-    setStatus("Connexion à GitLab…", "loading");
-    sourceVersion.textContent = "branche " + SOURCE.ref;
-    const dataItems = await listTree("data");
-    state.root = dataItems;
-    renderCategories();
-    setStatus("Source connectée", "ok");
-    state.currentPath = "data";
-    renderBreadcrumbs("data");
-    renderItems(dataItems);
-    document.querySelectorAll(".category-button").forEach(button =>
-      button.classList.toggle("active", button.dataset.path === "data")
-    );
-  } catch (error) {
-    showError(error);
-  }
+  setStatus("Source prête", "ok");
+  sourceVersion.textContent = "GitLab · " + SOURCE.ref;
+  state.root = CATEGORIES.map(item => ({ type: "tree", path: item.path, name: item.path.split("/").pop() }));
+  renderCategories();
+  renderBreadcrumbs("");
+  content.innerHTML = '<div class="empty-panel"><span class="empty-mark">✧</span><h2>Choisissez une catégorie</h2><p>Les données sont lues directement depuis GitLab, sans copie dans GitHub.</p></div>';
+  resultCount.textContent = CATEGORIES.length + " catégories";
 }
-
 init();
