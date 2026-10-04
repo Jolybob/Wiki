@@ -134,7 +134,7 @@ function renderBreadcrumbs(path) {
 }
 
 function renderItems(items) {
-  const visible = items.filter(item => item.type === "tree" || /\.(htm|html|md)$/i.test(item.name));
+  const visible = items.filter(item => item.type === "tree" || item.type === "file" || /\.(htm|html|md)$/i.test(item.name));
   state.currentItems = visible;
   resultCount.textContent = visible.length + " entrée" + (visible.length > 1 ? "s" : "");
   if (!visible.length) {
@@ -238,7 +238,7 @@ async function openFile(item) {
   readerTitle.textContent = displayName(item);
   readerMeta.textContent = item.path;
   readerBody.innerHTML = "<p>Chargement…</p>";
-  readerSource.href = SOURCE.raw + "/" + item.path.split("/").map(encodeURIComponent).join("/");
+  readerSource.href = SOURCE.base + item.path;
   try {
     const html = await fetchPage(item.path);
     const doc = new DOMParser().parseFromString(html, "text/html");
