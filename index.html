@@ -1,23 +1,21 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="A Pathfinder 2e wiki.">
+  <meta name="description" content="Pathfinder 2e — wiki live alimenté directement depuis le dépôt GitLab Pathfinder-fr.">
   <title>Pathfinder 2e Wiki</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="site-header">
     <div class="container header-inner">
-      <a class="brand" href="./">Pathfinder 2e Wiki</a>
+      <a class="brand" href="./">PF2e Wiki</a>
       <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
-      <nav id="site-nav" class="site-nav" aria-label="Primary navigation">
-        <a href="#rules">Rules</a>
-        <a href="#character">Character</a>
-        <a href="#equipment">Equipment</a>
-        <a href="#creatures">Creatures</a>
-        <a href="#world">World</a>
+      <nav id="site-nav" class="site-nav" aria-label="Navigation principale">
+        <a href="#browse">Explorer</a>
+        <a href="#about">À propos</a>
+        <a href="https://gitlab.com/pathfinder-fr/foundryvtt-pathfinder2-fr" target="_blank" rel="noreferrer">Source ↗</a>
       </nav>
     </div>
   </header>
@@ -25,76 +23,67 @@
   <main>
     <section class="hero">
       <div class="container">
-        <p class="eyebrow">Pathfinder Second Edition</p>
-        <h1>A wiki for your campaign.</h1>
-        <p class="hero-copy">An empty, extensible reference for Pathfinder 2e content. The structure is ready; the articles are not.</p>
+        <p class="eyebrow">Pathfinder 2e · Français</p>
+        <h1>Votre wiki, sans copie locale.</h1>
+        <p class="hero-copy">La bibliothèque reste dans le dépôt Pathfinder-fr. Cette interface lit les données à la demande depuis GitLab et ne les enregistre pas dans ce site.</p>
         <div class="search" role="search">
-          <label class="sr-only" for="search-input">Search the wiki</label>
-          <input id="search-input" type="search" placeholder="Search the wiki…" autocomplete="off">
-          <span class="search-hint">⌘ K</span>
+          <label class="sr-only" for="search-input">Rechercher</label>
+          <input id="search-input" type="search" placeholder="Rechercher une règle, un don, une classe…" autocomplete="off">
+          <kbd>⌘ K</kbd>
+        </div>
+        <div class="status-row" aria-live="polite">
+          <span id="connection-status" class="status status-loading">Connexion à la source…</span>
+          <span id="source-version" class="muted"></span>
         </div>
       </div>
     </section>
 
-    <section class="container section" id="categories">
+    <section class="container section" id="browse">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">Browse</p>
-          <h2>Wiki categories</h2>
+          <p class="eyebrow">Données live</p>
+          <h2>Explorer</h2>
         </div>
-        <span class="muted">0 articles</span>
+        <span id="result-count" class="muted"></span>
       </div>
-
-      <div class="card-grid">
-        <a class="card" href="#rules" id="rules">
-          <span class="card-icon">⚔</span>
-          <h3>Rules</h3>
-          <p>Actions, conditions, encounters, exploration, and core rules.</p>
-          <span class="card-meta">Empty</span>
-        </a>
-        <a class="card" href="#character" id="character">
-          <span class="card-icon">✦</span>
-          <h3>Character</h3>
-          <p>Ancestries, backgrounds, classes, feats, skills, and spells.</p>
-          <span class="card-meta">Empty</span>
-        </a>
-        <a class="card" href="#equipment" id="equipment">
-          <span class="card-icon">◆</span>
-          <h3>Equipment</h3>
-          <p>Weapons, armor, items, runes, and adventuring gear.</p>
-          <span class="card-meta">Empty</span>
-        </a>
-        <a class="card" href="#creatures" id="creatures">
-          <span class="card-icon">☠</span>
-          <h3>Creatures</h3>
-          <p>Bestiary entries, NPCs, hazards, and creature abilities.</p>
-          <span class="card-meta">Empty</span>
-        </a>
-        <a class="card" href="#world" id="world">
-          <span class="card-icon">◈</span>
-          <h3>World</h3>
-          <p>Locations, factions, deities, planes, and setting material.</p>
-          <span class="card-meta">Empty</span>
-        </a>
+      <div id="categories" class="category-bar" aria-label="Catégories"></div>
+      <div id="breadcrumbs" class="breadcrumbs"></div>
+      <div id="content" class="content-grid">
+        <div class="empty-panel">
+          <span class="empty-mark">✦</span>
+          <h2>Chargement…</h2>
+          <p>Lecture des répertoires publics de GitLab.</p>
+        </div>
       </div>
     </section>
 
-    <section class="container empty-state">
-      <div class="empty-panel">
-        <span class="empty-mark">✧</span>
-        <h2>The archive is empty</h2>
-        <p>No wiki articles have been added yet. This page is intentionally a clean starting point for building the reference.</p>
+    <section class="container section about" id="about">
+      <div class="about-panel">
+        <p class="eyebrow">Architecture v1</p>
+        <h2>Le dépôt reste la source de vérité.</h2>
+        <p>Le site ne contient pas les articles. Il récupère les index et les fiches à la volée via l’API GitLab et les URLs raw du dépôt. Un changement dans le dépôt est donc visible ici sans synchronisation ni base de données intermédiaire.</p>
+        <a class="source-link" href="https://gitlab.com/pathfinder-fr/foundryvtt-pathfinder2-fr" target="_blank" rel="noreferrer">Voir le dépôt Pathfinder-fr →</a>
       </div>
     </section>
   </main>
 
+  <div id="reader" class="reader" hidden>
+    <div class="reader-backdrop" data-close-reader></div>
+    <article class="reader-panel" aria-modal="true" role="dialog" aria-labelledby="reader-title">
+      <button class="reader-close" type="button" aria-label="Fermer" data-close-reader>×</button>
+      <div id="reader-meta" class="reader-meta"></div>
+      <h2 id="reader-title">Article</h2>
+      <div id="reader-body" class="reader-body"></div>
+      <a id="reader-source" class="source-link" target="_blank" rel="noreferrer">Voir le fichier source →</a>
+    </article>
+  </div>
+
   <footer class="site-footer">
     <div class="container footer-inner">
-      <span>Pathfinder 2e Wiki</span>
-      <span>Community reference template</span>
+      <span>PF2e Wiki</span>
+      <span>Source live : Pathfinder-fr / GitLab</span>
     </div>
   </footer>
-
   <script src="script.js"></script>
 </body>
 </html>
