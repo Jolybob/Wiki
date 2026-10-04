@@ -1,18 +1,17 @@
 const SOURCE = {
-  project: "pathfinder-fr%2Ffoundryvtt-pathfinder2-fr",
-  ref: "master",
-  api: "https://gitlab.com/api/v4",
-  raw: "https://gitlab.com/pathfinder-fr/foundryvtt-pathfinder2-fr/-/raw/master"
+  base: "https://pf2e.pathfinder-fr.org"
 };
 
 const CATEGORIES = [
   ["ancestries", "Ascendances"], ["heritages", "Héritages"], ["backgrounds", "Historiques"],
-  ["classes", "Classes"], ["class-features", "Capacités de classe"], ["feats", "Dons"],
-  ["spells", "Sorts"], ["equipment", "Équipement"], ["deities", "Divinités"],
-  ["actions", "Actions"], ["conditions", "États"], ["pathfinder-bestiary", "Bestiaire"],
-  ["pathfinder-bestiary-2", "Bestiaire 2"], ["pathfinder-bestiary-3", "Bestiaire 3"],
-  ["pathfinder-monster-core", "Monstres de base"], ["hazards", "Dangers"], ["vehicles", "Véhicules"]
-].map(([path, label]) => ({ path: "data/" + path, label }));
+  ["classes", "Classes"], ["archetypes", "Archétypes"], ["actions", "Actions"],
+  ["feats", "Dons"], ["ancestry-feats", "Dons d’ascendance"], ["class-feats", "Dons de classe"],
+  ["general-feats", "Dons généraux"], ["skill-feats", "Dons de compétence"], ["spells", "Sorts"],
+  ["equipment", "Équipement"], ["creatures", "Créatures"], ["hazards", "Dangers"],
+  ["deities", "Divinités"], ["divine-domains", "Domaines divins"], ["boons-curses", "Faveurs et malédictions"],
+  ["companions", "Compagnons"], ["familiar-abilities", "Pouvoirs des familiers"],
+  ["vehicles", "Véhicules"], ["rules", "Règles"], ["traits", "Traits"], ["remaster-changes", "Changements Remaster"]
+].map(([path, label]) => ({ path, label }));
 const state = { root: [], currentPath: "", currentItems: [], cache: new Map(), page: 1, hasMore: false };
 const $ = selector => document.querySelector(selector);
 const escapeHtml = value => String(value || "").replace(/[&<>"']/g, char => ({
@@ -54,35 +53,54 @@ function setStatus(text, type) {
   connectionStatus.className = "status status-" + type;
 }
 
-async function gitlabJson(path, params = {}) {
-  const url = new URL(SOURCE.api + "/" + path);
-  Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
+async function fetchPage(path) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
   try {
-    const response = await fetch(url, {
-      headers: { Accept: "application/json" },
+    const response = await fetch(SOURCE.base + (path.startsWith("/") ? path : "/" + path), {
       cache: "no-store",
       signal: controller.signal
     });
-    if (!response.ok) throw new Error("GitLab API " + response.status);
-    return response.json();
+    if (!response.ok) throw new Error("Site PF2e " + response.status);
+    return await response.text();
   } catch (error) {
-    if (error.name === "AbortError") throw new Error("GitLab API : délai dépassé (15 s)");
+    if (error.name === "AbortError") throw new Error("Site PF2e : délai dépassé (15 s)");
     throw error;
   } finally {
     clearTimeout(timeout);
   }
 }
 
-async function listTree(path = "", page = 1) {
-  const key = "tree:" + path + ":" + page;
-  if (state.cache.has(key)) return state.cache.get(key);
-  const batch = await gitlabJson("projects/" + SOURCE.project + "/repository/tree", {
-    ref: SOURCE.ref, path, per_page: 100, page
+function parseDirectory(path, html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const wanted = "/" + path.replace(/^\\/+|\\/+$/g, "") + "/";
+  const seen = new Set();
+  const items = [];
+
+  doc.querySelectorAll("a[href]").forEach(link => {
+    let href = link.getAttribute("href") || "";
+    if (!href.startsWith("/")) return;
+    href = href.split("#")[0].split("?")[0];
+    if (!href.startsWith(wanted) || href === wanted) return;
+    const rest = href.slice(wanted.length).replace(/\\/+$/, "");
+    if (!rest || rest.includes("/")) return;
+    if (seen.has(href)) return;
+    const name = (link.textContent || "").trim().replace(/\\s+/g, " ");
+    if (!name) return;
+    seen.add(href);
+    items.push({ type: "file", path: href, name, href });
   });
-  state.cache.set(key, batch);
-  return batch;
+
+  return items;
+}
+
+async function listTree(path = "") {
+  const key = "page:" + path;
+  if (state.cache.has(key)) return state.cache.get(key);
+  const html = await fetchPage(path);
+  const items = parseDirectory(path, html);
+  state.cache.set(key, items);
+  return items;
 }
 
 function displayName(item) {
@@ -140,10 +158,10 @@ async function openDirectory(path) {
     escapeHtml(path || "la source") + '</strong>.</p></div>';
   renderBreadcrumbs(path);
   try {
-    const items = await listTree(path, 1);
+    const items = await listTree(path);
     state.currentPath = path;
     state.page = 1;
-    state.hasMore = items.length === 100;
+    state.hasMore = false;
     renderItems(items);
     document.querySelectorAll(".category-button").forEach(button =>
       button.classList.toggle("active", button.dataset.path === path)
@@ -222,12 +240,14 @@ async function openFile(item) {
   readerBody.innerHTML = "<p>Chargement…</p>";
   readerSource.href = SOURCE.raw + "/" + item.path.split("/").map(encodeURIComponent).join("/");
   try {
-    const response = await fetch(readerSource.href, { cache: "no-store" });
-    if (!response.ok) throw new Error("Fichier " + response.status);
-    const raw = await response.text();
-    const entry = parseEntry(raw);
-    readerTitle.textContent = entry.name;
-    readerBody.innerHTML = sanitizeHtml(entry.description.replace(/@UUID\[[^\]]+\]\{([^}]+)\}/g, "$1"));
+    const html = await fetchPage(item.path);
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const title = doc.querySelector("h1, main h2, article h2, h2");
+    const main = doc.querySelector("main, article");
+    const body = main ? main.cloneNode(true) : doc.body.cloneNode(true);
+    body.querySelectorAll("script, style, nav, header, footer, form, button").forEach(el => el.remove());
+    readerTitle.textContent = title?.textContent?.trim() || displayName(item);
+    readerBody.innerHTML = sanitizeHtml(body.innerHTML || "<p>Aucun contenu lisible.</p>");
   } catch (error) {
     readerBody.innerHTML = '<p class="status status-error">Impossible de charger cette fiche : ' +
       escapeHtml(error.message) + '</p>';
@@ -241,8 +261,8 @@ function closeReader() {
 
 function showError(error) {
   setStatus("Source inaccessible", "error");
-  content.innerHTML = '<div class="empty-panel"><span class="empty-mark">!</span><h2>Impossible de lire GitLab</h2><p>' +
-    escapeHtml(error.message) + '. Vérifiez votre connexion ou les permissions/CORS de la source.</p></div>';
+  content.innerHTML = '<div class="empty-panel"><span class="empty-mark">!</span><h2>Impossible de lire le site PF2e SRD</h2><p>' +
+    escapeHtml(error.message) + '. Vérifiez votre connexion ou les permissions/CORS du site source.</p></div>';
 }
 
 async function searchSource(query) {
@@ -262,11 +282,11 @@ searchInput?.addEventListener("input", () => searchSource(searchInput.value));
 
 async function init() {
   setStatus("Source prête", "ok");
-  sourceVersion.textContent = "GitLab · " + SOURCE.ref;
+  sourceVersion.textContent = "PF2e SRD · pf2e.pathfinder-fr.org";
   state.root = CATEGORIES.map(item => ({ type: "tree", path: item.path, name: item.path.split("/").pop() }));
   renderCategories();
   renderBreadcrumbs("");
-  content.innerHTML = '<div class="empty-panel"><span class="empty-mark">✧</span><h2>Choisissez une catégorie</h2><p>Les données sont lues directement depuis GitLab, sans copie dans GitHub.</p></div>';
+  content.innerHTML = '<div class="empty-panel"><span class="empty-mark">✧</span><h2>Choisissez une catégorie</h2><p>Les données sont lues directement depuis le site PF2e SRD, sans copie dans GitHub.</p></div>';
   resultCount.textContent = CATEGORIES.length + " catégories";
 }
 init();
