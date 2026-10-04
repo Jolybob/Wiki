@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A Pathfinder 2e wiki.">
+  <title>Pathfinder 2e Wiki</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="./">Pathfinder 2e Wiki</a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav id="site-nav" class="site-nav" aria-label="Primary navigation">
+        <a href="#rules">Rules</a>
+        <a href="#character">Character</a>
+        <a href="#equipment">Equipment</a>
+        <a href="#creatures">Creatures</a>
+        <a href="#world">World</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <p class="eyebrow">Pathfinder Second Edition</p>
+        <h1>A wiki for your campaign.</h1>
+        <p class="hero-copy">An empty, extensible reference for Pathfinder 2e content. The structure is ready; the articles are not.</p>
+        <div class="search" role="search">
+          <label class="sr-only" for="search-input">Search the wiki</label>
+          <input id="search-input" type="search" placeholder="Search the wiki…" autocomplete="off">
+          <span class="search-hint">⌘ K</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="container section" id="categories">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Browse</p>
+          <h2>Wiki categories</h2>
+        </div>
+        <span class="muted">0 articles</span>
+      </div>
+
+      <div class="card-grid">
+        <a class="card" href="#rules" id="rules">
+          <span class="card-icon">⚔</span>
+          <h3>Rules</h3>
+          <p>Actions, conditions, encounters, exploration, and core rules.</p>
+          <span class="card-meta">Empty</span>
+        </a>
+        <a class="card" href="#character" id="character">
+          <span class="card-icon">✦</span>
+          <h3>Character</h3>
+          <p>Ancestries, backgrounds, classes, feats, skills, and spells.</p>
+          <span class="card-meta">Empty</span>
+        </a>
+        <a class="card" href="#equipment" id="equipment">
+          <span class="card-icon">◆</span>
+          <h3>Equipment</h3>
+          <p>Weapons, armor, items, runes, and adventuring gear.</p>
+          <span class="card-meta">Empty</span>
+        </a>
+        <a class="card" href="#creatures" id="creatures">
+          <span class="card-icon">☠</span>
+          <h3>Creatures</h3>
+          <p>Bestiary entries, NPCs, hazards, and creature abilities.</p>
+          <span class="card-meta">Empty</span>
+        </a>
+        <a class="card" href="#world" id="world">
+          <span class="card-icon">◈</span>
+          <h3>World</h3>
+          <p>Locations, factions, deities, planes, and setting material.</p>
+          <span class="card-meta">Empty</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="container empty-state">
+      <div class="empty-panel">
+        <span class="empty-mark">✧</span>
+        <h2>The archive is empty</h2>
+        <p>No wiki articles have been added yet. This page is intentionally a clean starting point for building the reference.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <span>Pathfinder 2e Wiki</span>
+      <span>Community reference template</span>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
