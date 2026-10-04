@@ -49,9 +49,22 @@ function setStatus(text, type) {
 async function gitlabJson(path, params = {}) {
   const url = new URL(SOURCE.api + "/" + path);
   Object.entries(params).forEach(([key, value]) => url.searchParams.set(key, value));
-  const response = await fetch(url, { headers: { Accept: "application/json" }, cache: "no-store" });
-  if (!response.ok) throw new Error("GitLab API " + response.status);
-  return response.json();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      cache: "no-store",
+      signal: controller.signal
+    });
+    if (!response.ok) throw new Error("GitLab API " + response.status);
+    return response.json();
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error("GitLab API : délai dépassé (15 s)");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function listTree(path = "") {
@@ -221,11 +234,17 @@ searchInput?.addEventListener("input", () => searchSource(searchInput.value));
 async function init() {
   try {
     setStatus("Connexion à GitLab…", "loading");
-    state.root = await listTree("");
-    renderCategories();
     sourceVersion.textContent = "branche " + SOURCE.ref;
+    const dataItems = await listTree("data");
+    state.root = dataItems;
+    renderCategories();
     setStatus("Source connectée", "ok");
-    await openDirectory("data");
+    state.currentPath = "data";
+    renderBreadcrumbs("data");
+    renderItems(dataItems);
+    document.querySelectorAll(".category-button").forEach(button =>
+      button.classList.toggle("active", button.dataset.path === "data")
+    );
   } catch (error) {
     showError(error);
   }
